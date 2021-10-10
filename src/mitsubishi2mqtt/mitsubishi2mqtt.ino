@@ -14,13 +14,13 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "FS.h"               // SPIFFS for store config
+#include "LittleFS.h"               // LittleFS for store config
 #ifdef ESP32
 #include <WiFi.h>             // WIFI for ESP32
 #include <WiFiUdp.h>
 #include <ESPmDNS.h>          // mDNS for ESP32
 #include <WebServer.h>        // webServer for ESP32
-#include "SPIFFS.h"           // ESP32 SPIFFS for store config
+#include "LittleFS.h"           // ESP32 LittleFS for store config
 WebServer server(80);         //ESP32 web
 #else
 #include <ESP8266WiFi.h>      // WIFI for ESP8266
@@ -86,16 +86,16 @@ void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
   // Serial.println(F("Starting Mitsubishi2MQTT"));
-  // Mount SPIFFS filesystem
-  if (SPIFFS.begin())
+  // Mount LittleFS filesystem
+  if (LittleFS.begin())
   {
     // Serial.println(F("Mounted file system"));
   }
   else
   {
     // Serial.println(F("Failed to mount FS -> formating"));
-    SPIFFS.format();
-    // if (SPIFFS.begin())
+    LittleFS.format();
+    // if (LittleFS.begin())
       // Serial.println(F("Mounted file system after formating"));
   }
   //set led pin as output
@@ -118,8 +118,8 @@ void setup() {
   loadOthers();
   loadUnit();
   if (initWifi()) {
-    if (SPIFFS.exists(console_file)) {
-      SPIFFS.remove(console_file);
+    if (LittleFS.exists(console_file)) {
+      LittleFS.remove(console_file);
     }
     //write_log("Starting Mitsubishi2MQTT");
     //Web interface
@@ -211,11 +211,11 @@ void setup() {
 bool loadWifi() {
   ap_ssid = "";
   ap_pwd  = "";
-  if (!SPIFFS.exists(wifi_conf)) {
+  if (!LittleFS.exists(wifi_conf)) {
     // Serial.println(F("Wifi config file not exist!"));
     return false;
   }
-  File configFile = SPIFFS.open(wifi_conf, "r");
+  File configFile = LittleFS.open(wifi_conf, "r");
   if (!configFile) {
     // Serial.println(F("Failed to open wifi config file"));
     return false;
@@ -258,7 +258,7 @@ void saveMqtt(String mqttFn, String mqttHost, String mqttPort, String mqttUser,
   doc["mqtt_user"] = mqttUser;
   doc["mqtt_pwd"] = mqttPwd;
   doc["mqtt_topic"] = mqttTopic;
-  File configFile = SPIFFS.open(mqtt_conf, "w");
+  File configFile = LittleFS.open(mqtt_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open config file for writing"));
   }
@@ -288,7 +288,7 @@ void saveUnit(String tempUnit, String supportMode, String loginPassword, String 
   if (loginPassword.isEmpty()) loginPassword = "";
 
   doc["login_password"]   = loginPassword;
-  File configFile = SPIFFS.open(unit_conf, "w");
+  File configFile = LittleFS.open(unit_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open config file for writing"));
   }
@@ -303,7 +303,7 @@ void saveWifi(String apSsid, String apPwd, String hostName, String otaPwd) {
   doc["ap_pwd"] = apPwd;
   doc["hostname"] = hostName;
   doc["ota_pwd"] = otaPwd;
-  File configFile = SPIFFS.open(wifi_conf, "w");
+  File configFile = LittleFS.open(wifi_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
@@ -318,7 +318,7 @@ void saveOthers(String haa, String haat, String debug) {
   doc["haa"] = haa;
   doc["haat"] = haat;
   doc["debug"] = debug;
-  File configFile = SPIFFS.open(others_conf, "w");
+  File configFile = LittleFS.open(others_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
@@ -372,12 +372,12 @@ void initOTA() {
 }
 
 bool loadMqtt() {
-  if (!SPIFFS.exists(mqtt_conf)) {
+  if (!LittleFS.exists(mqtt_conf)) {
     Serial.println(F("MQTT config file not exist!"));
     return false;
   }
   //write_log("Loading MQTT configuration");
-  File configFile = SPIFFS.open(mqtt_conf, "r");
+  File configFile = LittleFS.open(mqtt_conf, "r");
   if (!configFile) {
     //write_log("Failed to open MQTT config file");
     return false;
@@ -415,11 +415,11 @@ bool loadMqtt() {
 }
 
 bool loadUnit() {
-  if (!SPIFFS.exists(unit_conf)) {
+  if (!LittleFS.exists(unit_conf)) {
     // Serial.println(F("Unit config file not exist!"));
     return false;
   }
-  File configFile = SPIFFS.open(unit_conf, "r");
+  File configFile = LittleFS.open(unit_conf, "r");
   if (!configFile) {
     return false;
   }
@@ -454,11 +454,11 @@ bool loadUnit() {
 
 
 bool loadOthers() {
-  if (!SPIFFS.exists(others_conf)) {
+  if (!LittleFS.exists(others_conf)) {
     // Serial.println(F("Others config file not exist!"));
     return false;
   }
-  File configFile = SPIFFS.open(others_conf, "r");
+  File configFile = LittleFS.open(others_conf, "r");
   if (!configFile) {
     return false;
   }
@@ -645,7 +645,7 @@ void handleSetup() {
     pageReset.replace("_TXT_M_RESET_",FPSTR(txt_m_reset));
     pageReset.replace("_SSID_",ssid);
     sendWrappedHTML(pageReset);
-    SPIFFS.format();
+    LittleFS.format();
     delay(500);
 #ifdef ESP32
     ESP.restart();
@@ -1184,7 +1184,7 @@ void handleUploadLoop() {
 }
 
 void write_log(String log) {
-  File logFile = SPIFFS.open(console_file, "a");
+  File logFile = LittleFS.open(console_file, "a");
   logFile.println(log);
   logFile.close();
 }
@@ -1511,7 +1511,7 @@ void haConfig() {
   haConfig["mode_stat_tpl"]                 = F("{{ value_json.mode if (value_json is defined and value_json.mode is defined and value_json.mode|length) else 'off' }}"); //Set default value for fix "Could not parse data for HA"
   haConfig["temp_cmd_t"]                    = ha_temp_set_topic;
   haConfig["temp_stat_t"]                   = ha_state_topic;
-  haConfig["avty_t"]                        = ha_availability_topic; // MQTT last will (status) messages topic 
+  haConfig["avty_t"]                        = ha_availability_topic; // MQTT last will (status) messages topic
   haConfig["pl_not_avail"]                  = mqtt_payload_unavailable; // MQTT offline message payload
   haConfig["pl_avail"]                      = mqtt_payload_available; // MQTT online message payload
   //Set default value for fix "Could not parse data for HA"
@@ -1739,14 +1739,14 @@ bool checkLogin() {
 void loop() {
   server.handleClient();
   ArduinoOTA.handle();
-  
+
   //reset board to attempt to connect to wifi again if in ap mode or wifi dropped out and time limit passed
   if (WiFi.getMode() == WIFI_STA and WiFi.status() == WL_CONNECTED) {
 	  wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (wifi_config_exists and millis() > wifi_timeout) {
 	  ESP.restart();
   }
-  
+
   if (!captive) {
     // Sync HVAC UNIT
     if (!hp.isConnected()) {
