@@ -75,9 +75,11 @@ unsigned long lastTempSend;
 unsigned long lastMqttRetry;
 unsigned long lastHpSync;
 unsigned long hpConnectionRetries;
+unsigned long lastRemoteSet;
+float lastRemote;
 
 //Local state
-StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
+StaticJsonDocument<JSON_OBJECT_SIZE(13)> rootInfo;
 
 //Web OTA
 int uploaderror = 0;
@@ -191,6 +193,7 @@ void setup() {
     rootInfo["mode"]                = hpGetMode(currentSettings);
     rootInfo["action"]              = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
+    rootInfo["remoteTemp"]          = lastRemote;
     lastTempSend = millis();
   }
   else {
@@ -1307,6 +1310,7 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     rootInfo["mode"]                = hpGetMode(currentSettings);
     rootInfo["action"]              = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
+    rootInfo["remoteTemp"]          = lastRemote;
     String mqttOutput;
     serializeJson(rootInfo, mqttOutput);
 
@@ -1315,6 +1319,14 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     }
 
     lastTempSend = millis();
+  }
+
+  if (lastRemoteSet > 0 && (millis() > (lastRemoteSet + REMOTE_TEMPERATURE_TIMEOUT))) {
+    // if we haven't seen a remote temperature input in a while, revert to local
+    if (_debugMode) mqtt_client.publish(ha_debug_topic.c_str(), (char*)("Clearing remote temperature setting due to timeout"));
+    hp.setRemoteTemperature(0);
+    lastRemoteSet = 0;
+    lastRemote = 0;
   }
 }
 
@@ -1445,6 +1457,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   else if (strcmp(topic, ha_remote_temp_set_topic.c_str()) == 0) {
     float temperature = strtof(message, NULL);
     hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, useFahrenheit));
+    if (_debugMode) mqtt_client.publish(ha_debug_topic.c_str(), (char*)("remote temperature set"));
+    lastRemote = temperature;
+    lastRemoteSet = millis();
     hp.update();
   }
   else if (strcmp(topic, ha_debug_set_topic.c_str()) == 0) { //if the incoming message is on the heatpump_debug_set_topic topic...

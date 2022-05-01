@@ -99,6 +99,7 @@ const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS = 45000; // 45 seconds (anythi
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000; // 1 seconds
 const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000; // 1 seconds
 const PROGMEM uint32_t HP_MAX_RETRIES = 5;
+const PROGMEM uint32_t REMOTE_TEMPERATURE_TIMEOUT = 360000; // 10 mintes
 
 // temp settings
 bool useFahrenheit = false;
