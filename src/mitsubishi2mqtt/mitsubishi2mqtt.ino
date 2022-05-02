@@ -80,6 +80,7 @@ float lastRemote;
 
 //Local state
 StaticJsonDocument<JSON_OBJECT_SIZE(13)> rootInfo;
+StaticJsonDocument<JSON_OBJECT_SIZE(2)> jsonInfo;
 
 //Web OTA
 int uploaderror = 0;
@@ -165,6 +166,7 @@ void setup() {
       ha_debug_set_topic       = mqtt_topic + "/" + mqtt_fn + "/debug/set";
       ha_custom_packet         = mqtt_topic + "/" + mqtt_fn + "/custom/send";
       ha_availability_topic = mqtt_topic + "/" + mqtt_fn + "/availability";
+      ha_jsonattr_topic        = mqtt_topic + "/" + mqtt_fn + "/jsonattr";
 
       if (others_haa) {
         ha_config_topic       = others_haa_topic + "/climate/" + mqtt_fn + "/config";
@@ -193,7 +195,6 @@ void setup() {
     rootInfo["mode"]                = hpGetMode(currentSettings);
     rootInfo["action"]              = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
-    rootInfo["remoteTemp"]          = lastRemote;
     lastTempSend = millis();
   }
   else {
@@ -1310,7 +1311,6 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     rootInfo["mode"]                = hpGetMode(currentSettings);
     rootInfo["action"]              = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
-    rootInfo["remoteTemp"]          = lastRemote;
     String mqttOutput;
     serializeJson(rootInfo, mqttOutput);
 
@@ -1319,6 +1319,13 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     }
 
     lastTempSend = millis();
+
+    // load some additional attributes into the MQTT Climate entity, stick with their casing style
+    jsonInfo["compressor_frequency"] = currentStatus.compressorFrequency;
+    jsonInfo["remote_temp"]          = lastRemote;
+    String jsonOutput;
+    serializeJson(jsonInfo, jsonOutput);
+    mqtt_client.publish_P(ha_jsonattr_topic.c_str(), jsonOutput.c_str(), false);
   }
 
   if (lastRemoteSet > 0 && (millis() > (lastRemoteSet + REMOTE_TEMPERATURE_TIMEOUT))) {
@@ -1579,6 +1586,8 @@ void haConfig() {
   haConfigDevice["sw"]    = "Mitsubishi2MQTT " + String(m2mqtt_version);
   haConfigDevice["mdl"]   = "HVAC MITSUBISHI";
   haConfigDevice["mf"]    = "MITSUBISHI ELECTRIC";
+
+  haConfig["json_attributes_topic"] = ha_jsonattr_topic;
 
   String mqttOutput;
   serializeJson(haConfig, mqttOutput);

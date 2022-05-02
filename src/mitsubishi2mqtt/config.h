@@ -80,6 +80,7 @@ String ha_discovery_topic;
 String ha_custom_packet;
 String ha_availability_topic;
 String hvac_name;
+String ha_jsonattr_topic;
 
 //login
 String login_username = "admin";
