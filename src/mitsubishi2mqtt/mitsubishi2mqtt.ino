@@ -43,6 +43,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "html_init.h"    // code html for initial config
 #include "html_menu.h"    // code html for menu
 #include "html_pages.h"   // code html for pages
+#include "html_installer.h"
 // Languages
 #ifndef MY_LANGUAGE
   #include "languages/en-GB.h" // default language English
@@ -134,6 +135,7 @@ void setup() {
     server.on("/unit", handleUnit);
     server.on("/status", handleStatus);
     server.on("/others", handleOthers);
+    server.on("/installer", handleInstaller);
     server.onNotFound(handleNotFound);
     if (login_password.length() > 0) {
       server.on("/login", handleLogin);
@@ -714,6 +716,41 @@ void handleOthers() {
     sendWrappedHTML(othersPage);
   }
 }
+
+
+void handleInstaller() {
+  if (!checkLogin()) return;
+  char buffer[MAX_FUNCTION_CODE_COUNT * 32], *ptr;
+
+  if (server.method() == HTTP_POST) {
+    int code = server.arg("code").toInt();
+    int value = server.arg("value").toInt();
+    sprintf(buffer, "Set installer, code=%d, value=%d", code, value);
+    if (_debugMode) mqtt_client.publish(ha_debug_topic.c_str(), buffer);
+
+    if ((code != 0) && (value >= 0) && (value <= 3)) {
+        heatpumpFunctions functions = hp.getFunctions();
+        functions.setValue(code, value);
+        hp.setFunctions(functions);
+    }
+  }
+
+  String installerPage =  FPSTR(html_page_installer);
+  heatpumpFunctions functions = hp.getFunctions();
+  heatpumpFunctionCodes codes = functions.getAllCodes();
+  ptr = buffer;
+  ptr += sprintf(ptr, "valid: %d", functions.isValid());
+  for (int i = 0; i < MAX_FUNCTION_CODE_COUNT; ++i) {
+      int code = codes.code[i];
+      int value = functions.getValue(code);
+      //ptr += sprintf(ptr, "<div>%d: %.2X</div>", i, functions.raw[i]);
+      ptr += sprintf(ptr, "<div>%d: %d</div>", code, value);
+  }
+
+  installerPage.replace("_TXT_FUNCTIONS", buffer);
+  sendWrappedHTML(installerPage);
+}
+
 
 void handleMqtt() {
   if (!checkLogin()) return;
