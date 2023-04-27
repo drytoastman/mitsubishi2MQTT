@@ -76,9 +76,11 @@ unsigned long lastHpSync;
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
 unsigned long lastRemoteTemp;
+float currentRemote;
 
 //Local state
 StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
+StaticJsonDocument<JSON_OBJECT_SIZE(12)> jsonInfo;
 
 //Web OTA
 int uploaderror = 0;
@@ -167,6 +169,7 @@ void setup() {
       ha_custom_packet         = mqtt_topic + "/" + mqtt_fn + "/custom/send";
       ha_availability_topic    = mqtt_topic + "/" + mqtt_fn + "/availability";
       ha_system_set_topic      = mqtt_topic + "/" + mqtt_fn + "/system/set";
+      ha_jsonattr_topic        = mqtt_topic + "/" + mqtt_fn + "/jsonattr";
 
       if (others_haa) {
         ha_config_topic       = others_haa_topic + "/climate/" + mqtt_fn + "/config";
@@ -1325,6 +1328,13 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     }
 
     lastTempSend = millis();
+
+    // load some additional attributes into the MQTT Climate entity, stick with their casing style
+    jsonInfo["compressor_frequency"] = currentStatus.compressorFrequency;
+    jsonInfo["remote_temp"]          = currentRemote;
+    String jsonOutput;
+    serializeJson(jsonInfo, jsonOutput);
+    mqtt_client.publish_P(ha_jsonattr_topic.c_str(), jsonOutput.c_str(), false);
   }
 }
 
@@ -1332,6 +1342,7 @@ void hpCheckRemoteTemp(){
     if (remoteTempActive && (millis() - lastRemoteTemp > CHECK_REMOTE_TEMP_INTERVAL_MS)) { //if it's been 5 minutes since last remote_temp message, revert back to HP internal temp sensor
      remoteTempActive = false;
      float temperature = 0;
+     currentRemote = 0;
      hp.setRemoteTemperature(temperature);
      hp.update();
     }
@@ -1451,11 +1462,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     float temperature = strtof(message, NULL);
     if (temperature == 0){ //Remote temp disabled by mqtt topic set
       remoteTempActive = false; //clear the remote temp flag
+      currentRemote = 0;
       hp.setRemoteTemperature(0.0);
     }
     else {
       remoteTempActive = true; //Remote temp has been pushed.
       lastRemoteTemp = millis(); //Note time
+      currentRemote = temperature;
       hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, useFahrenheit));
     }
   }
@@ -1590,7 +1603,9 @@ void haConfig() {
   haConfigDevice["mdl"]   = "HVAC MITSUBISHI";
   haConfigDevice["mf"]    = "MITSUBISHI ELECTRIC";
   haConfigDevice["configuration_url"]    = "http://"+WiFi.localIP().toString();
-  
+
+  haConfig["json_attributes_topic"] = ha_jsonattr_topic;
+
   String mqttOutput;
   serializeJson(haConfig, mqttOutput);
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);

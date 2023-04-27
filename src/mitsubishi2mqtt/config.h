@@ -75,13 +75,14 @@ String ha_settings_topic;
 String ha_state_topic;
 String ha_debug_pckts_topic;
 String ha_debug_pckts_set_topic;
-String ha_debug_logs_topic;  
+String ha_debug_logs_topic;
 String ha_debug_logs_set_topic;
 String ha_config_topic;
 String ha_discovery_topic;
 String ha_custom_packet;
 String ha_availability_topic;
 String hvac_name;
+String ha_jsonattr_topic;
 
 //login
 String login_username = "admin";
@@ -105,7 +106,7 @@ const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000; //5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000; // 1 second
 const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000; // 1 second
 const PROGMEM uint32_t HP_MAX_RETRIES = 10; // Double the interval between retries up to this many times, then keep retrying forever at that maximum interval.
-// Default values give a final retry interval of 1000ms * 2^10, which is 1024 seconds, about 17 minutes. 
+// Default values give a final retry interval of 1000ms * 2^10, which is 1024 seconds, about 17 minutes.
 
 // temp settings
 bool useFahrenheit = false;
