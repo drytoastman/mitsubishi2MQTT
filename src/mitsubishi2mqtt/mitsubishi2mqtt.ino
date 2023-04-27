@@ -59,7 +59,7 @@ PubSubClient mqtt_client(espClient);
 
 //Captive portal variables, only used for config page
 const byte DNS_PORT = 53;
-IPAddress apIP(192, 168, 1, 1);
+IPAddress apIP(10, 1, 1, 1);
 IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 
